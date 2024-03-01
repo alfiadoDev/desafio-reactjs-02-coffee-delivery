@@ -1,0 +1,90 @@
+import { ReactNode, createContext, useEffect, useReducer } from 'react'
+import { Item, Order, cartReducer } from '../reducers/cart/reducer'
+import {
+  addItemAction,
+  checkoutCartAction,
+  decrimentItemQuantityAction,
+  incrimentItemQuantityAction,
+  removeItemAction,
+} from '../reducers/cart/actions'
+import { useNavigate } from 'react-router-dom'
+import { OrderInfo } from '../pages/Cart'
+
+interface CartContextType {
+  cart: Item[]
+  orders: Order[]
+  addItem: (item: Item) => void
+  removeItem: (itemId: Item['id']) => void
+  incrementItemQuantity: (item: Item['id']) => void
+  decrementItemQuantity: (item: Item['id']) => void
+  checkout: (order: OrderInfo) => void
+}
+
+export const CartContext = createContext({} as CartContextType)
+
+export function CartContextProvider({ children }: { children: ReactNode }) {
+  const [cartState, dispatch] = useReducer(
+    cartReducer,
+    {
+      cart: [],
+      orders: [],
+    },
+    (initialState) => {
+      const storedStateAsJSON = localStorage.getItem(
+        '@coffee-delivery:cart-state-1.0.0',
+      )
+
+      if (storedStateAsJSON) return JSON.parse(storedStateAsJSON)
+
+      return initialState
+    },
+  )
+
+  const navigate = useNavigate()
+
+  const { cart, orders } = cartState
+
+  function addItem(item: Item) {
+    dispatch(addItemAction(item))
+  }
+
+  function removeItem(itemId: Item['id']) {
+    dispatch(removeItemAction(itemId))
+  }
+
+  function incrementItemQuantity(itemId: Item['id']) {
+    dispatch(incrimentItemQuantityAction(itemId))
+  }
+
+  function decrementItemQuantity(itemId: Item['id']) {
+    dispatch(decrimentItemQuantityAction(itemId))
+  }
+
+  function checkout(order: OrderInfo) {
+    dispatch(checkoutCartAction(order, navigate))
+  }
+
+  useEffect(() => {
+    if (cartState) {
+      const stateJSON = JSON.stringify(cartState)
+
+      localStorage.setItem('@coffee-delivery:cart-state-1.0.0', stateJSON)
+    }
+  }, [cartState])
+
+  return (
+    <CartContext.Provider
+      value={{
+        addItem,
+        cart,
+        orders,
+        incrementItemQuantity,
+        decrementItemQuantity,
+        removeItem,
+        checkout,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  )
+}
